@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Навигация НГТУ</title>
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#ffffff">
+
+  <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
+
+  <style>
+    :root {
+      --border-color: #cbd5e1;
+      --bg-active: #f1f5f9;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #ffffff;
+      overscroll-behavior: none;
+    }
+
+    .app-screen {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding-top: env(safe-area-inset-top, 12px);
+      padding-bottom: env(safe-area-inset-bottom, 12px);
+    }
+
+    .top-bar {
+      padding: 8px 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #ffffff;
+      z-index: 10;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      padding: 8px 12px;
+      background: #ffffff;
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 16px;
+      background: transparent;
+    }
+
+    .clear-btn {
+      font-size: 18px;
+      color: #94a3b8;
+      cursor: pointer;
+      display: none;
+    }
+
+    .controls-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mode-toggle {
+      display: flex;
+      border: 1.5px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .btn-mode {
+      border: none;
+      background: #ffffff;
+      padding: 6px 12px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .btn-mode.active {
+      background: var(--bg-active);
+      font-weight: 600;
+    }
+
+    .selectors-pill {
+      display: flex;
+      align-items: center;
+      border: 1.5px solid var(--border-color);
+      border-radius: 20px;
+      padding: 2px 4px;
+      gap: 2px;
+    }
+
+    .num-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 15px;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .num-btn.active {
+      border: 1.5px solid #64748b;
+      font-weight: 700;
+    }
+
+    .map-viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background-color: #ffffff;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #panzoom-element {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #map-image {
+      max-width: 95%;
+      max-height: 95%;
+      object-fit: contain;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-screen">
+    <header class="top-bar">
+      <div class="search-box">
+        <input type="text" id="roomInput" inputmode="numeric" placeholder="Введите аудиторию..">
+        <span class="clear-btn" id="clearBtn">✕</span>
+      </div>
+
+      <div class="controls-row">
+        <div class="mode-toggle">
+          <button class="btn-mode active" id="btnModeFloor">Этаж</button>
+          <button class="btn-mode" id="btnModeBuilding">Корпус</button>
+        </div>
+
+        <div class="selectors-pill" id="selectorContainer"></div>
+      </div>
+    </header>
+
+    <main class="map-viewport">
+      <div id="panzoom-element">
+        <img id="map-image" src="" alt="Схема">
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const panzoomArea = document.getElementById('panzoom-element');
+    const panzoom = Panzoom(panzoomArea, {
+      maxScale: 4,
+      minScale: 0.9,
+      contain: 'outside'
+    });
+    panzoomArea.parentElement.addEventListener('wheel', panzoom.zoomWithWheel);
+
+    const buildingFloors = {
+      '1': ['1', '2', '3'],
+      '2': ['1', '2', '3'],
+      '3': ['1', '2', '3'],
+      '4': ['1', '2', '3', '4'],
+      '5': ['1', '2', '3', '4'],
+      '6': ['0', '1', '2', '3', '4', '5']
+    };
+
+    const buildingsList = ['1', '2', '3', '4', '5', '6'];
+
+    let currentMode = 'floor';
+    let currentBuilding = '1';
+    let currentFloor = '1';
+
+    const roomInput = document.getElementById('roomInput');
+    const clearBtn = document.getElementById('clearBtn');
+    const mapImage = document.getElementById('map-image');
+    const selectorContainer = document.getElementById('selectorContainer');
+    const btnModeFloor = document.getElementById('btnModeFloor');
+    const btnModeBuilding = document.getElementById('btnModeBuilding');
+
+    function getAvailableFloors(bld) {
+      return buildingFloors[bld] || ['1', '2', '3'];
+    }
+
+    function renderSelectors() {
+      selectorContainer.innerHTML = '';
+      const floorsForCurrentBuilding = getAvailableFloors(currentBuilding);
+
+      if (!floorsForCurrentBuilding.includes(currentFloor)) {
+        currentFloor = floorsForCurrentBuilding.includes('1') ? '1' : floorsForCurrentBuilding[0];
+      }
+
+      const list = currentMode === 'floor' ? floorsForCurrentBuilding : buildingsList;
+      const activeValue = currentMode === 'floor' ? currentFloor : currentBuilding;
+
+      list.forEach(val => {
+        const btn = document.createElement('button');
+        btn.className = `num-btn ${val === activeValue ? 'active' : ''}`;
+        btn.textContent = val;
+        btn.addEventListener('click', () => {
+          if (currentMode === 'floor') {
+            currentFloor = val;
+          } else {
+            currentBuilding = val;
+            const validFloors = getAvailableFloors(currentBuilding);
+            if (!validFloors.includes(currentFloor)) {
+              currentFloor = validFloors.includes('1') ? '1' : validFloors[0];
+            }
+          }
+          renderSelectors();
+          updateMapDisplay();
+        });
+        selectorContainer.appendChild(btn);
+      });
+    }
+
+    btnModeFloor.addEventListener('click', () => {
+      currentMode = 'floor';
+      btnModeFloor.classList.add('active');
+      btnModeBuilding.classList.remove('active');
+      renderSelectors();
+    });
+
+    btnModeBuilding.addEventListener('click', () => {
+      currentMode = 'building';
+      btnModeBuilding.classList.add('active');
+      btnModeFloor.classList.remove('active');
+      renderSelectors();
+    });
+
+    function loadEmptyFloor(building, floor) {
+      const candidates = [
+        `assets/navigate/${building}/${floor}level%2520non-active.png`,
+        `assets/navigate/${building}/${floor}level%20non-active.png`,
+        `assets/navigate/${building}/${floor}level non-active.png`
+      ];
+
+      let idx = 0;
+      function tryLoad() {
+        if (idx >= candidates.length) {
+          mapImage.src = '';
+          return;
+        }
+
+        const testPath = candidates[idx];
+        const img = new Image();
+
+        img.onload = () => {
+          mapImage.src = testPath;
+        };
+        img.onerror = () => {
+          idx++;
+          tryLoad();
+        };
+        img.src = testPath;
+      }
+
+      tryLoad();
+    }
+
+    function updateMapDisplay() {
+      const room = roomInput.value.trim();
+
+      if (room.length >= 3) {
+        const routePath = `assets/navigate/${currentBuilding}/${room}.png`;
+        const testImg = new Image();
+
+        testImg.onload = () => {
+          mapImage.src = routePath;
+        };
+        testImg.onerror = () => {
+          loadEmptyFloor(currentBuilding, currentFloor);
+        };
+        testImg.src = routePath;
+      } else {
+        loadEmptyFloor(currentBuilding, currentFloor);
+      }
+    }
+
+    roomInput.addEventListener('input', () => {
+      const val = roomInput.value.trim();
+      clearBtn.style.display = val.length > 0 ? 'block' : 'none';
+
+      if (val.length >= 2) {
+        const parsedBuilding = val[0];
+        const parsedFloor = val[1];
+
+        let stateChanged = false;
+
+        if (buildingsList.includes(parsedBuilding) && currentBuilding !== parsedBuilding) {
+          currentBuilding = parsedBuilding;
+          stateChanged = true;
+        }
+
+        const validFloors = getAvailableFloors(currentBuilding);
+        if (validFloors.includes(parsedFloor) && currentFloor !== parsedFloor) {
+          currentFloor = parsedFloor;
+          stateChanged = true;
+        }
+
+        if (stateChanged) {
+          renderSelectors();
+        }
+      }
+
+      updateMapDisplay();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      roomInput.value = '';
+      clearBtn.style.display = 'none';
+      updateMapDisplay();
+      panzoom.reset();
+    });
+
+    renderSelectors();
+    loadEmptyFloor(currentBuilding, currentFloor);
+  </script>
+</body>
+</html>
