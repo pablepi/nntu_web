@@ -5,10 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Навигация НГТУ</title>
   
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Базовые метатеги для мобильных браузеров -->
   <meta name="theme-color" content="#ffffff">
+  <meta name="mobile-web-app-capable" content="yes">
 
+  <!-- Настройки PWA и иконка для iOS (Safari) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="НГТУ Карта">
+  <link rel="apple-touch-icon" href="icon.png">
+
+  <!-- Иконка во вкладке браузера и манифест приложения -->
+  <link rel="icon" type="image/png" href="icon.png">
+  <link rel="manifest" href="manifest.json">
+
+  <!-- Библиотека для pinch-to-zoom жестов пальцами -->
   <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 
   <style>
