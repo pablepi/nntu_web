@@ -5,27 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Навигация НГТУ</title>
   
-  <!-- Базовые метатеги для мобильных браузеров -->
   <meta name="theme-color" content="#ffffff">
   <meta name="mobile-web-app-capable" content="yes">
 
-  <!-- Настройки PWA и иконка для iOS (Safari) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="НГТУ Карта">
   <link rel="apple-touch-icon" href="icon.png">
 
-  <!-- Иконка во вкладке браузера и манифест приложения -->
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="manifest" href="manifest.json">
 
-  <!-- Библиотека для pinch-to-zoom жестов пальцами -->
   <script src="https://unpkg.com/@panzoom/panzoom@4.5.1/dist/panzoom.min.js"></script>
 
   <style>
     :root {
+      --bg-main: #ffffff;
+      --bg-panel: #ffffff;
+      --bg-card: #f8fafc;
       --border-color: #cbd5e1;
       --bg-active: #f1f5f9;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+    }
+
+    body.dark-theme {
+      --bg-main: #0b0f19;
+      --bg-panel: #111827;
+      --bg-card: #1f2937;
+      --border-color: #374151;
+      --bg-active: #374151;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
     }
 
     * {
@@ -41,8 +52,10 @@
       height: 100%;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: #ffffff;
+      background-color: var(--bg-main);
+      color: var(--text-main);
       overscroll-behavior: none;
+      transition: background-color 0.25s ease, color 0.25s ease;
     }
 
     .app-screen {
@@ -58,18 +71,27 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      background: #ffffff;
+      background: var(--bg-main);
       z-index: 10;
-      border-bottom: 1px solid #f1f5f9;
+      border-bottom: 1px solid var(--border-color);
+      transition: background-color 0.25s ease, border-color 0.25s ease;
+    }
+
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
     .search-box {
+      flex: 1;
       display: flex;
       align-items: center;
       border: 1.5px solid var(--border-color);
       border-radius: 12px;
       padding: 8px 12px;
-      background: #ffffff;
+      background: var(--bg-panel);
+      transition: border-color 0.25s ease, background-color 0.25s ease;
     }
 
     .search-box input {
@@ -78,13 +100,42 @@
       outline: none;
       font-size: 16px;
       background: transparent;
+      color: var(--text-main);
+    }
+
+    .search-box input::placeholder {
+      color: var(--text-muted);
     }
 
     .clear-btn {
       font-size: 18px;
-      color: #94a3b8;
+      color: var(--text-muted);
       cursor: pointer;
       display: none;
+    }
+
+    .menu-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border-color);
+      background: var(--bg-panel);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.25s ease, background-color 0.25s ease;
+    }
+
+    .menu-btn span {
+      width: 20px;
+      height: 2px;
+      background-color: var(--text-main);
+      border-radius: 2px;
+      pointer-events: none;
     }
 
     .controls-row {
@@ -98,15 +149,18 @@
       border: 1.5px solid var(--border-color);
       border-radius: 12px;
       overflow: hidden;
+      background: var(--bg-panel);
     }
 
     .btn-mode {
       border: none;
-      background: #ffffff;
+      background: transparent;
       padding: 6px 12px;
       font-size: 14px;
       font-weight: 500;
       cursor: pointer;
+      color: var(--text-main);
+      transition: background-color 0.2s ease;
     }
 
     .btn-mode.active {
@@ -121,6 +175,7 @@
       border-radius: 20px;
       padding: 2px 4px;
       gap: 2px;
+      background: var(--bg-panel);
     }
 
     .num-btn {
@@ -135,10 +190,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      color: var(--text-main);
+      transition: border-color 0.2s ease, font-weight 0.2s ease;
     }
 
     .num-btn.active {
-      border: 1.5px solid #64748b;
+      border: 1.5px solid var(--text-main);
       font-weight: 700;
     }
 
@@ -146,7 +203,7 @@
       flex: 1;
       position: relative;
       overflow: hidden;
-      background-color: #ffffff;
+      background-color: var(--bg-main);
       touch-action: none;
       display: flex;
       align-items: center;
@@ -166,15 +223,130 @@
       max-height: 95%;
       object-fit: contain;
     }
+
+    /* Оптимизированная шторка настроек без блюра на аппаратном ускорении */
+    .drawer-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, visibility 0.2s ease;
+      will-change: opacity;
+    }
+
+    .drawer-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 82%;
+      max-width: 320px;
+      background: var(--bg-panel);
+      z-index: 101;
+      transform: translate3d(100%, 0, 0);
+      transition: transform 0.22s cubic-bezier(0, 0, 0.2, 1);
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+      display: flex;
+      flex-direction: column;
+      padding: calc(env(safe-area-inset-top, 20px) + 16px) 20px 24px;
+      will-change: transform;
+    }
+
+    .drawer.active {
+      transform: translate3d(0, 0, 0);
+    }
+
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .drawer-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .drawer-close {
+      font-size: 22px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 4px;
+    }
+
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .setting-label {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .segment-control {
+      display: flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .segment-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .segment-btn.active {
+      background: var(--bg-panel);
+      color: var(--text-main);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
   </style>
 </head>
 <body>
 
   <div class="app-screen">
     <header class="top-bar">
-      <div class="search-box">
-        <input type="text" id="roomInput" inputmode="numeric" placeholder="Введите аудиторию..">
-        <span class="clear-btn" id="clearBtn">✕</span>
+      <div class="search-row">
+        <div class="search-box">
+          <input type="text" id="roomInput" inputmode="numeric" placeholder="Введите аудиторию..">
+          <span class="clear-btn" id="clearBtn">✕</span>
+        </div>
+        <button class="menu-btn" id="menuOpenBtn" aria-label="Настройки">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
 
       <div class="controls-row">
@@ -193,6 +365,33 @@
       </div>
     </main>
   </div>
+
+  <!-- Шторка настроек -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-title" id="txtSettingsTitle">Настройки</div>
+      <button class="drawer-close" id="menuCloseBtn">✕</button>
+    </div>
+
+    <!-- Переключатель языка -->
+    <div class="setting-group">
+      <div class="setting-label" id="txtLangLabel">Язык</div>
+      <div class="segment-control">
+        <button class="segment-btn active" id="btnLangRu">Русский</button>
+        <button class="segment-btn" id="btnLangEn">English</button>
+      </div>
+    </div>
+
+    <!-- Переключатель темы -->
+    <div class="setting-group">
+      <div class="setting-label" id="txtThemeLabel">Оформление</div>
+      <div class="segment-control">
+        <button class="segment-btn active" id="btnThemeLight">Светлая</button>
+        <button class="segment-btn" id="btnThemeDark">Темная</button>
+      </div>
+    </div>
+  </aside>
 
   <script>
     const panzoomArea = document.getElementById('panzoom-element');
@@ -224,6 +423,93 @@
     const selectorContainer = document.getElementById('selectorContainer');
     const btnModeFloor = document.getElementById('btnModeFloor');
     const btnModeBuilding = document.getElementById('btnModeBuilding');
+
+    const i18n = {
+      ru: {
+        placeholder: 'Введите аудиторию..',
+        floor: 'Этаж',
+        building: 'Корпус',
+        settings: 'Настройки',
+        lang: 'Язык',
+        theme: 'Оформление',
+        light: 'Светлая',
+        dark: 'Темная'
+      },
+      en: {
+        placeholder: 'Enter room number..',
+        floor: 'Floor',
+        building: 'Building',
+        settings: 'Settings',
+        lang: 'Language',
+        theme: 'Theme',
+        light: 'Light',
+        dark: 'Dark'
+      }
+    };
+
+    let currentLang = localStorage.getItem('app_lang') || 'ru';
+    let currentTheme = localStorage.getItem('app_theme') || 'light';
+
+    function applyLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('app_lang', lang);
+
+      const t = i18n[lang];
+      roomInput.placeholder = t.placeholder;
+      btnModeFloor.textContent = t.floor;
+      btnModeBuilding.textContent = t.building;
+      document.getElementById('txtSettingsTitle').textContent = t.settings;
+      document.getElementById('txtLangLabel').textContent = t.lang;
+      document.getElementById('txtThemeLabel').textContent = t.theme;
+      document.getElementById('btnThemeLight').textContent = t.light;
+      document.getElementById('btnThemeDark').textContent = t.dark;
+
+      document.getElementById('btnLangRu').classList.toggle('active', lang === 'ru');
+      document.getElementById('btnLangEn').classList.toggle('active', lang === 'en');
+    }
+
+    function applyTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem('app_theme', theme);
+
+      if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', '#111827');
+      } else {
+        document.body.classList.remove('dark-theme');
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', '#ffffff');
+      }
+
+      document.getElementById('btnThemeLight').classList.toggle('active', theme === 'light');
+      document.getElementById('btnThemeDark').classList.toggle('active', theme === 'dark');
+    }
+
+    // Управление меню
+    const drawer = document.getElementById('drawer');
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const menuOpenBtn = document.getElementById('menuOpenBtn');
+    const menuCloseBtn = document.getElementById('menuCloseBtn');
+
+    function openDrawer() {
+      drawer.classList.add('active');
+      drawerOverlay.classList.add('active');
+    }
+
+    function closeDrawer() {
+      drawer.classList.remove('active');
+      drawerOverlay.classList.remove('active');
+    }
+
+    menuOpenBtn.addEventListener('click', openDrawer);
+    menuCloseBtn.addEventListener('click', closeDrawer);
+    drawerOverlay.addEventListener('click', closeDrawer);
+
+    document.getElementById('btnLangRu').addEventListener('click', () => applyLanguage('ru'));
+    document.getElementById('btnLangEn').addEventListener('click', () => applyLanguage('en'));
+    document.getElementById('btnThemeLight').addEventListener('click', () => applyTheme('light'));
+    document.getElementById('btnThemeDark').addEventListener('click', () => applyTheme('dark'));
 
     function getAvailableFloors(bld) {
       return buildingFloors[bld] || ['1', '2', '3'];
@@ -360,8 +646,20 @@
       panzoom.reset();
     });
 
+    applyLanguage(currentLang);
+    applyTheme(currentTheme);
+
     renderSelectors();
     loadEmptyFloor(currentBuilding, currentFloor);
+  
+  // Регистрация Service Worker для офлайн-работы
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => console.log('PWA Service Worker готов к офлайн-работе'))
+          .catch((err) => console.log('Ошибка регистрации SW:', err));
+      });
+    }
   </script>
 </body>
 </html>
