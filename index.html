@@ -224,7 +224,7 @@
       object-fit: contain;
     }
 
-    /* Оптимизированная шторка настроек без блюра на аппаратном ускорении */
+    /* Шторка настроек и подложка */
     .drawer-overlay {
       position: fixed;
       top: 0;
@@ -591,10 +591,20 @@
       tryLoad();
     }
 
-    function updateMapDisplay() {
-      const room = roomInput.value.trim();
+    // Нормализация: если ввели 3 цифры (например, "125") — дополняем текущим выбранным корпусом: "6125"
+    function getNormalizedRoom(val) {
+      if (!val) return '';
+      if (val.length === 3) {
+        return currentBuilding + val;
+      }
+      return val;
+    }
 
-      if (room.length >= 3) {
+    function updateMapDisplay() {
+      const rawVal = roomInput.value.trim();
+      const room = getNormalizedRoom(rawVal);
+
+      if (room.length >= 4) {
         const routePath = `assets/navigate/${currentBuilding}/${room}.png`;
         const testImg = new Image();
 
@@ -614,11 +624,12 @@
       const val = roomInput.value.trim();
       clearBtn.style.display = val.length > 0 ? 'block' : 'none';
 
-      if (val.length >= 2) {
+      let stateChanged = false;
+
+      // Если ввели 4 цифры целиком (например, 6125)
+      if (val.length >= 4) {
         const parsedBuilding = val[0];
         const parsedFloor = val[1];
-
-        let stateChanged = false;
 
         if (buildingsList.includes(parsedBuilding) && currentBuilding !== parsedBuilding) {
           currentBuilding = parsedBuilding;
@@ -630,10 +641,20 @@
           currentFloor = parsedFloor;
           stateChanged = true;
         }
+      } 
+      // Если ввели 3 цифры (например, 125) — корпус уже выбран, переключаем только этаж по первой цифре
+      else if (val.length === 3) {
+        const parsedFloor = val[0];
+        const validFloors = getAvailableFloors(currentBuilding);
 
-        if (stateChanged) {
-          renderSelectors();
+        if (validFloors.includes(parsedFloor) && currentFloor !== parsedFloor) {
+          currentFloor = parsedFloor;
+          stateChanged = true;
         }
+      }
+
+      if (stateChanged) {
+        renderSelectors();
       }
 
       updateMapDisplay();
@@ -646,13 +667,7 @@
       panzoom.reset();
     });
 
-    applyLanguage(currentLang);
-    applyTheme(currentTheme);
-
-    renderSelectors();
-    loadEmptyFloor(currentBuilding, currentFloor);
-  
-  // Регистрация Service Worker для офлайн-работы
+    // Регистрация Service Worker для офлайн-работы
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -660,6 +675,12 @@
           .catch((err) => console.log('Ошибка регистрации SW:', err));
       });
     }
+
+    applyLanguage(currentLang);
+    applyTheme(currentTheme);
+
+    renderSelectors();
+    loadEmptyFloor(currentBuilding, currentFloor);
   </script>
 </body>
 </html>
